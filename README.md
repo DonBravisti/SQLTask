@@ -1,51 +1,82 @@
-Создание базы данных
-CREATE SCHEMA IF NOT EXISTS `online_shop` DEFAULT CHARACTER SET utf8
+# Создание таблиц
 
-Создание таблиц
+CREATE TABLE `products` (  
+   `id` int NOT NULL AUTO_INCREMENT,  
+   `name` varchar(45) NOT NULL,  
+   `price` decimal(5,2) NOT NULL,  
+   PRIMARY KEY (`id`)  
+ ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci  
+ 
+CREATE TABLE `orders` (  
+   `id` int NOT NULL AUTO_INCREMENT,  
+   `FIO` varchar(45) NOT NULL,  
+   `address` varchar(45) NOT NULL,  
+   `carrier_id` int NOT NULL,  
+   PRIMARY KEY (`id`),  
+   KEY `orders_carriers_idx` (`carrier_id`),  
+   CONSTRAINT `orders_carriers` FOREIGN KEY (`carrier_id`) REFERENCES `carriers` (`id`)  
+ ) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci  
+ 
+ CREATE TABLE `carriers` (  
+   `id` int NOT NULL AUTO_INCREMENT,  
+   `name` varchar(45) NOT NULL,  
+   `phone_num` varchar(20) NOT NULL,  
+   `car_num` varchar(20) NOT NULL,  
+   PRIMARY KEY (`id`)  
+ ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci  
 
-orders
-CREATE TABLE IF NOT EXISTS `online_shop`.`orders` (
-  `id` INT NOT NULL AUTO_INCREMENT,
-  `customer_name` VARCHAR(45) NULL,
-  `delivery_address` VARCHAR(100) NULL,
-  `id_product` INT NULL,
-  PRIMARY KEY (`id`))
-ENGINE = InnoDB
+CREATE TABLE `order_items` (  
+   `id` int NOT NULL AUTO_INCREMENT,  
+   `product_id` int NOT NULL,  
+   `order_id` int NOT NULL,  
+   `amount` int NOT NULL,  
+   PRIMARY KEY (`id`),  
+   KEY `products_order_items_idx` (`product_id`),  
+   KEY `orders_order_items_idx` (`order_id`),  
+   CONSTRAINT `orders_order_items` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`),  
+   CONSTRAINT `products_order_items` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`)  
+ ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 
-products
-CREATE TABLE IF NOT EXISTS `online_shop`.`products` (
-  `id` INT NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(45) NULL,
-  `price` INT NULL,
-  PRIMARY KEY (`id`))
-ENGINE = InnoDB
+# 1. Получить всю информацию по ID заказа: продукты, количество, кто и куда доставляет, сумма заказа
 
-carriers
-CREATE TABLE IF NOT EXISTS `online_shop`.`carriers` (
-  `id` INT NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(45) NULL,
-  `car_brand_and_number` VARCHAR(100) NULL,
-  `id_order` INT NULL,
-  PRIMARY KEY (`id`))
-ENGINE = InnoDB
+SELECT o.FIO, o.address, p.name, oi.amount, p.price*oi.amount as Sum, c.name 
+from shop.orders as o  
 
-Заполнение таблиц
+join shop.carriers as c  
+on o.carrier_id = c.id  
 
-orders
-INSERT INTO `online_shop`.`orders` (`id`, `customer_name`, `delivery_address`, `id_product`) VALUES (1, 'Олегов Олег Олегович', 'Куйбышева', 1);
-INSERT INTO `online_shop`.`orders` (`id`, `customer_name`, `delivery_address`, `id_product`) VALUES (2, 'Петров Петр Петрович', 'Ватутина', 3);
-INSERT INTO `online_shop`.`orders` (`id`, `customer_name`, `delivery_address`, `id_product`) VALUES (3, 'Диванов Алексей Петрович', 'Магкаева', 2);
-INSERT INTO `online_shop`.`orders` (`id`, `customer_name`, `delivery_address`, `id_product`) VALUES (4, 'Кононов Валерий Алексеевич', 'Хадарцева', 4);
-INSERT INTO `online_shop`.`orders` (`id`, `customer_name`, `delivery_address`, `id_product`) VALUES (5, 'Иванова Ирина Петровна', 'Минина', 4);
+join shop.order_items as oi  
+on o.id = oi.order_id  
 
-products
-INSERT INTO `online_shop`.`products` (`id`, `name`, `price`) VALUES (1, 'Книга', 100);
-INSERT INTO `online_shop`.`products` (`id`, `name`, `price`) VALUES (2, 'Тетрадь', 30);
-INSERT INTO `online_shop`.`products` (`id`, `name`, `price`) VALUES (3, 'Ручка', 1000);
-INSERT INTO `online_shop`.`products` (`id`, `name`, `price`) VALUES (4, 'Карандаш', 15);
-INSERT INTO `online_shop`.`products` (`id`, `name`, `price`) VALUES (5, 'Закладки', 50);
+join shop.products as p  
+on p.id = oi.product_id  
 
-carriers
-INSERT INTO `online_shop`.`carriers` (`id`, `name`, `car_brand_and_number`, `id_order`) VALUES (1, 'Дмитриев Дмитрий Олегович', 'Lada 2101 н756нр', 1);
-INSERT INTO `online_shop`.`carriers` (`id`, `name`, `car_brand_and_number`, `id_order`) VALUES (2, 'Мусаев Шахзод Шерали-Угли', 'BMW у007зб', 2);
-INSERT INTO `online_shop`.`carriers` (`id`, `name`, `car_brand_and_number`, `id_order`) VALUES (3, 'Басурин Иван Иванович', 'Lada н654нн', 4);
+where o.id = 3  
+
+
+# 2. Создание заказа
+INSERT INTO shop.orders (FIO, address, carrier_id) VALUES ('Олег', 'Ватутина', '2');
+INSERT INTO shop.order_items (product_id, order_id, amount) VALUES ('2', '3', '3');
+INSERT INTO shop.order_items (product_id, order_id, amount) VALUES ('4', '4', '4');
+
+
+# 3. Вывести все заказы для заданного ID курьера
+SELECT x.FIO, x.address, p.name, oi.amount, p.price*oi.amount as Sum, c.name
+FROM shop.orders as x  
+
+join shop.carriers as c  
+on x.carrier_id = c.id  
+
+join shop.order_items as oi  
+on x.id = oi.order_id  
+
+join shop.products as p  
+on p.id = oi.product_id  
+
+where x.carrier_id = 1  
+
+
+# 4. Увеличить количество продукта по имени продукта в конкретном заказе по ID
+UPDATE shop.order_items  
+SET amount = '15'  
+WHERE (id = '2');  
